@@ -1,12 +1,19 @@
 {
-  "name": "server",
+  "name": "holding-radar-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Express API for Holding Radar.",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
   },
-  "keywords": [],
+  "keywords": [
+    "investments",
+    "typescript",
+    "express"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",

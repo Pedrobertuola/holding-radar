@@ -1,0 +1,16 @@
+{
+  "name": "holding-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Full-stack TypeScript MVP for ranking Brazilian stocks and FIIs with educational analysis.",
+  "scripts": {
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "typecheck": "npm --prefix server run typecheck && npm --prefix client run build"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ]
+}
