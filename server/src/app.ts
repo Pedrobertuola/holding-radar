@@ -1,14 +1,40 @@
 import cors from 'cors';
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 
 import { aiRouter } from './routes/ai';
 import { assetsRouter } from './routes/assets';
+import { scannerRouter } from './routes/scanner';
 
 export const app = express();
 
+const localhostOrigins = new Set([
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+]);
+
+const configuredOrigins = (process.env.CORS_ORIGIN ?? process.env.CLIENT_ORIGIN)
+  ?.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins =
+  configuredOrigins && configuredOrigins.length > 0
+    ? new Set(configuredOrigins)
+    : isProduction
+      ? new Set<string>()
+      : localhostOrigins;
+
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Origem não permitida pelo CORS.'));
+    },
   }),
 );
 app.use(express.json({ limit: '1mb' }));
@@ -16,9 +42,34 @@ app.use(express.json({ limit: '1mb' }));
 app.get('/api/health', (_request, response) => {
   response.json({
     status: 'ok',
-    app: 'Holding Radar API',
+    app: 'API do Holding Radar',
   });
 });
 
 app.use('/api/assets', assetsRouter);
+app.use('/api/scanner', scannerRouter);
 app.use('/api/ai', aiRouter);
+
+app.use((_request, response) => {
+  response.status(404).json({
+    message: 'Rota não encontrada.',
+  });
+});
+
+app.use(
+  (
+    error: Error,
+    _request: Request,
+    response: Response,
+    _next: NextFunction,
+  ) => {
+    console.error('Erro não tratado na API:', error);
+
+    response.status(500).json({
+      message:
+        process.env.NODE_ENV === 'production'
+          ? 'Erro interno no servidor.'
+          : error.message,
+    });
+  },
+);

@@ -1,33 +1,63 @@
 const indicatorLabels: Record<string, string> = {
+  precoAtual: 'Preço atual',
+  valorDeMercado: 'Valor de mercado',
+  volume: 'Volume',
+  pl: 'P/L',
+  lpa: 'LPA',
+  minima52Semanas: 'Mínima em 52 semanas',
+  maxima52Semanas: 'Máxima em 52 semanas',
+  pvp: 'P/VP',
   roe: 'ROE',
   roic: 'ROIC',
-  netMargin: 'Net margin',
-  debtToEbitda: 'Debt / EBITDA',
-  pe: 'P/E',
+  netMargin: 'Margem líquida',
+  margemLiquida: 'Margem líquida',
+  margemEbitda: 'Margem EBITDA',
+  debtToEbitda: 'Dívida / EBITDA',
+  dividaPatrimonio: 'Dívida / patrimônio',
+  pe: 'P/L',
   evEbitda: 'EV / EBITDA',
   priceToBook: 'P/B',
-  dividendYield: 'Dividend yield',
-  payoutRatio: 'Payout ratio',
-  revenueCagr: 'Revenue CAGR',
-  profitCagr: 'Profit CAGR',
-  freeCashFlowYield: 'FCF yield',
-  earningsStability: 'Earnings stability',
-  liquidityScore: 'Liquidity score',
-  governanceScore: 'Governance score',
-  sectorConcentration: 'Sector concentration',
-  reinvestmentScore: 'Reinvestment score',
-  vacancyRate: 'Vacancy rate',
-  pvp: 'P/VP',
-  ffoYield: 'FFO yield',
+  dividendYield: 'Rendimento de dividendos',
+  dividendYieldPatrimonial12m: 'DY patrimonial 12m',
+  dividendYieldMensal: 'Dividend yield mensal',
+  rendimentoMensalPorCota: 'Rendimento mensal por cota',
+  rendimento12mPorCota: 'Rendimento 12m por cota',
+  payoutRatio: 'Payout',
+  revenueCagr: 'CAGR de receita',
+  profitCagr: 'CAGR de lucro',
+  freeCashFlowYield: 'Rendimento do FCF',
+  earningsStability: 'Estabilidade dos resultados',
+  liquidityScore: 'Liquidez',
+  governanceScore: 'Governança',
+  sectorConcentration: 'Concentração setorial',
+  reinvestmentScore: 'Reinvestimento',
+  crescimentoReceita: 'Crescimento da receita',
+  crescimentoLucro: 'Crescimento do lucro',
+  beta: 'Beta',
+  vacancyRate: 'Vacância',
+  ffoYield: 'Rendimento do FFO',
   capRate: 'Cap rate',
-  tenantConcentration: 'Tenant concentration',
-  assetQualityScore: 'Asset quality',
-  managementQualityScore: 'Management quality',
-  distributionStability: 'Distribution stability',
-  leverage: 'Leverage',
-  defaultRate: 'Default rate',
-  contractDurationYears: 'Contract duration',
-  leaseDiversificationScore: 'Lease diversification',
+  tenantConcentration: 'Concentração de locatários',
+  assetQualityScore: 'Qualidade dos ativos',
+  managementQualityScore: 'Qualidade da gestão',
+  distributionStability: 'Estabilidade da distribuição',
+  leverage: 'Alavancagem',
+  defaultRate: 'Inadimplência',
+  contractDurationYears: 'Prazo médio dos contratos',
+  leaseDiversificationScore: 'Diversificação dos contratos',
+  patrimonioLiquido: 'Patrimônio líquido',
+  valorPatrimonialCota: 'Valor patrimonial por cota',
+  totalAtivos: 'Total de ativos',
+  totalInvestidores: 'Total de investidores',
+  cotasEmitidas: 'Cotas emitidas',
+  imoveis: 'Imóveis e direitos reais',
+  imoveisRendaAcabados: 'Imóveis para renda acabados',
+  imoveisRendaConstrucao: 'Imóveis para renda em construção',
+  criCra: 'CRI/CRA',
+  cotasFii: 'Cotas de FIIs',
+  liquidezCaixa: 'Disponibilidades',
+  totalInvestido: 'Total investido',
+  totalPassivo: 'Total do passivo',
 };
 
 const percentIndicators = new Set([
@@ -35,10 +65,16 @@ const percentIndicators = new Set([
   'roic',
   'netMargin',
   'dividendYield',
+  'dividendYieldPatrimonial12m',
+  'dividendYieldMensal',
   'payoutRatio',
   'revenueCagr',
   'profitCagr',
   'freeCashFlowYield',
+  'margemLiquida',
+  'margemEbitda',
+  'crescimentoReceita',
+  'crescimentoLucro',
   'vacancyRate',
   'ffoYield',
   'capRate',
@@ -65,6 +101,36 @@ const multipleIndicators = new Set([
   'evEbitda',
   'priceToBook',
   'pvp',
+  'pl',
+  'evEbitda',
+  'dividaPatrimonio',
+]);
+
+const currencyIndicators = new Set([
+  'precoAtual',
+  'lpa',
+  'rendimentoMensalPorCota',
+  'rendimento12mPorCota',
+  'minima52Semanas',
+  'maxima52Semanas',
+  'valorDeMercado',
+  'patrimonioLiquido',
+  'valorPatrimonialCota',
+  'totalAtivos',
+  'imoveis',
+  'imoveisRendaAcabados',
+  'imoveisRendaConstrucao',
+  'criCra',
+  'cotasFii',
+  'liquidezCaixa',
+  'totalInvestido',
+  'totalPassivo',
+]);
+
+const integerIndicators = new Set([
+  'volume',
+  'totalInvestidores',
+  'cotasEmitidas',
 ]);
 
 export const formatScore = (score: number) => `${Math.round(score)}/100`;
@@ -75,7 +141,9 @@ export const getIndicatorLabel = (key: string) => indicatorLabels[key] ?? key;
 
 export const formatIndicatorValue = (key: string, value: number) => {
   if (percentIndicators.has(key)) {
-    return `${value.toFixed(1)}%`;
+    return `${(value * 100).toLocaleString('pt-BR', {
+      maximumFractionDigits: 1,
+    })}%`;
   }
 
   if (scoreIndicators.has(key)) {
@@ -86,11 +154,25 @@ export const formatIndicatorValue = (key: string, value: number) => {
     return `${value.toFixed(1)}x`;
   }
 
-  if (key === 'contractDurationYears') {
-    return `${value.toFixed(1)} years`;
+  if (currencyIndicators.has(key)) {
+    return value.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      maximumFractionDigits: value >= 1000 ? 0 : 2,
+    });
   }
 
-  return value.toLocaleString('en-US', {
+  if (integerIndicators.has(key)) {
+    return value.toLocaleString('pt-BR', {
+      maximumFractionDigits: 0,
+    });
+  }
+
+  if (key === 'contractDurationYears') {
+    return `${value.toFixed(1)} anos`;
+  }
+
+  return value.toLocaleString('pt-BR', {
     maximumFractionDigits: 1,
   });
 };

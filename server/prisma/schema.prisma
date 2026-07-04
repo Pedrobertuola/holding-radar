@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssetType {
+  STOCK
+  FII
+}
+
+model Asset {
+  id        Int      @id @default(autoincrement())
+  ticker    String   @unique
+  name      String?
+  type      AssetType
+  sector    String?
+  segment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  aiAnalyses AiAnalysis[]
+}
+
+model QuoteSnapshot {
+  id            Int      @id @default(autoincrement())
+  ticker        String
+  price         Float?
+  changePercent Float?
+  volume        Float?
+  marketCap     Float?
+  source        String
+  asOfDate      DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([ticker, createdAt])
+}
+
+model FundamentalsSnapshot {
+  id             Int      @id @default(autoincrement())
+  ticker         String
+  assetType      AssetType
+  rawJson        String
+  normalizedJson String
+  source         String
+  asOfDate       DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([ticker, createdAt])
+}
+
+model DividendSnapshot {
+  id             Int      @id @default(autoincrement())
+  ticker         String
+  rawJson        String
+  normalizedJson String
+  source         String
+  asOfDate       DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([ticker, createdAt])
+}
+
+model ScoreSnapshot {
+  id             Int      @id @default(autoincrement())
+  ticker         String
+  finalScore     Float
+  qualityScore   Float
+  valuationScore Float
+  incomeScore    Float
+  growthScore    Float?
+  riskScore      Float
+  status         String
+  missingFields  String
+  stale          Boolean  @default(false)
+  source         String
+  asOfDate       DateTime
+  createdAt      DateTime @default(now())
+
+  aiAnalyses AiAnalysis[]
+
+  @@index([ticker, createdAt])
+}
+
+model AiAnalysis {
+  id              Int      @id @default(autoincrement())
+  ticker          String
+  scoreSnapshotId Int?
+  analysisText    String
+  inputHash       String
+  model           String
+  createdAt       DateTime @default(now())
+
+  scoreSnapshot ScoreSnapshot? @relation(fields: [scoreSnapshotId], references: [id])
+  asset         Asset          @relation(fields: [ticker], references: [ticker])
+
+  @@unique([ticker, inputHash])
+  @@index([ticker, createdAt])
+}
+
+model ApiFailureLog {
+  id           Int      @id @default(autoincrement())
+  ticker       String
+  provider     String
+  endpoint     String
+  statusCode   Int?
+  errorMessage String
+  createdAt    DateTime @default(now())
+
+  @@index([ticker, createdAt])
+}

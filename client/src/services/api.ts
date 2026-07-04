@@ -1,6 +1,6 @@
-import type { AiAnalysisResponse, Asset } from '../types';
+import type { AiAnalysisResponse, Asset, ScannerResult } from '../types';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
+const apiBaseUrl = import.meta.env.VITE_API_URL ?? '';
 
 const requestJson = async <T>(
   path: string,
@@ -16,7 +16,7 @@ const requestJson = async <T>(
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || `Request failed with ${response.status}`);
+    throw new Error(message || `Falha na requisição: ${response.status}`);
   }
 
   return response.json() as Promise<T>;
@@ -27,6 +27,13 @@ export const getAssets = async () => {
   return data.assets;
 };
 
+export const getScanner = async () => requestJson<ScannerResult>('/api/scanner');
+
+export const refreshScanner = async () =>
+  requestJson<ScannerResult>('/api/scanner/refresh', {
+    method: 'POST',
+  });
+
 export const getAsset = async (ticker: string) => {
   const data = await requestJson<{ asset: Asset }>(`/api/assets/${ticker}`);
   return data.asset;
@@ -35,5 +42,5 @@ export const getAsset = async (ticker: string) => {
 export const generateAiAnalysis = async (asset: Asset) =>
   requestJson<AiAnalysisResponse>('/api/ai/analyze', {
     method: 'POST',
-    body: JSON.stringify({ asset }),
+    body: JSON.stringify({ ticker: asset.ticker }),
   });

@@ -2,7 +2,7 @@
   "name": "holding-radar",
   "version": "0.1.0",
   "private": true,
-  "description": "Full-stack TypeScript MVP for ranking Brazilian stocks and FIIs with educational analysis.",
+  "description": "MVP full-stack em TypeScript para ranking educacional de ações brasileiras e FIIs.",
   "scripts": {
     "dev:client": "npm --prefix client run dev",
     "dev:server": "npm --prefix server run dev",

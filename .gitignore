@@ -4,3 +4,9 @@ dist
 .env.local
 .DS_Store
 npm-debug.log*
+.npm-cache
+.tmp-cvm
+.prisma-home
+.prisma-appdata
+server/prisma/*.db
+server/prisma/*.db-journal

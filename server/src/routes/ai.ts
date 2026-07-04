@@ -1,36 +1,43 @@
 import { Router } from 'express';
 
-import { assets } from '../data/assets';
 import { generateEducationalAnalysis } from '../services/aiAnalysis';
-import type { Asset } from '../types';
+import { findScoredAsset } from '../services/marketScannerService';
 
 export const aiRouter = Router();
 
-const resolveAsset = (payload: unknown): Asset | undefined => {
+const resolveTicker = (payload: unknown) => {
   if (!payload || typeof payload !== 'object') {
     return undefined;
   }
 
-  const candidate = payload as Partial<Asset>;
+  const candidate = payload as { ticker?: unknown; asset?: { ticker?: unknown } };
+  const ticker =
+    typeof candidate.ticker === 'string'
+      ? candidate.ticker
+      : typeof candidate.asset?.ticker === 'string'
+        ? candidate.asset.ticker
+        : undefined;
 
-  if (!candidate.ticker || typeof candidate.ticker !== 'string') {
-    return undefined;
-  }
-
-  const canonicalAsset = assets.find(
-    (asset) => asset.ticker === candidate.ticker?.toUpperCase(),
-  );
-
-  return canonicalAsset ?? (candidate as Asset);
+  return ticker?.toUpperCase();
 };
 
 aiRouter.post('/analyze', async (request, response) => {
-  const asset = resolveAsset(request.body.asset ?? request.body);
+  const ticker = resolveTicker(request.body);
 
-  if (!asset) {
+  if (!ticker) {
     response.status(400).json({
       message:
-        'Send an asset object with at least a ticker to generate an educational analysis.',
+        'Envie um ticker ou um ativo já pontuado pelo scanner para gerar a análise educacional.',
+    });
+    return;
+  }
+
+  const asset = await findScoredAsset(ticker);
+
+  if (!asset) {
+    response.status(422).json({
+      message:
+        'A análise com IA só está disponível para ativos com dados reais suficientes e pontuação válida.',
     });
     return;
   }

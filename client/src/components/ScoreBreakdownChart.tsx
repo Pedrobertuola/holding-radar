@@ -16,13 +16,13 @@ interface ScoreBreakdownChartProps {
 
 export function ScoreBreakdownChart({ scores }: ScoreBreakdownChartProps) {
   const data = [
-    { label: 'Quality', value: scores.quality },
-    { label: 'Price', value: scores.price },
-    { label: 'Income', value: scores.income },
+    { label: 'Qualidade', value: scores.quality },
+    { label: 'Preço', value: scores.price },
+    { label: 'Renda', value: scores.income },
     ...(scores.growth !== undefined
-      ? [{ label: 'Growth', value: scores.growth }]
+      ? [{ label: 'Crescimento', value: scores.growth }]
       : []),
-    { label: 'Risk', value: scores.risk },
+    { label: 'Risco', value: scores.risk },
     { label: 'Final', value: scores.final },
   ];
 
@@ -37,7 +37,7 @@ export function ScoreBreakdownChart({ scores }: ScoreBreakdownChartProps) {
             type="category"
             tickLine={false}
             axisLine={false}
-            width={72}
+            width={96}
           />
           <Tooltip
             cursor={{ fill: '#f8fafc' }}
@@ -45,7 +45,7 @@ export function ScoreBreakdownChart({ scores }: ScoreBreakdownChartProps) {
               const numericValue =
                 typeof value === 'number' ? value : Number(value ?? 0);
 
-              return [`${Math.round(numericValue)}/100`, 'Score'];
+              return [`${Math.round(numericValue)}/100`, 'Pontuação'];
             }}
           />
           <Bar dataKey="value" fill="#0f172a" radius={[0, 4, 4, 0]} />
