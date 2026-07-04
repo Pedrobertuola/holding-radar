@@ -1,18 +1,32 @@
 import type { AiAnalysisResponse, Asset, ScannerResult } from '../types';
 
-const apiBaseUrl = import.meta.env.VITE_API_URL ?? '';
+const apiBaseUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 
 const requestJson = async <T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> => {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  });
+  if (!apiBaseUrl) {
+    throw new Error(
+      'API não configurada. Defina VITE_API_URL na Vercel com a URL pública do backend no Render.',
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
+  } catch {
+    throw new Error(
+      `Não foi possível conectar à API em ${apiBaseUrl}. Verifique se o backend no Render está ativo e se CORS_ORIGIN permite o domínio da Vercel.`,
+    );
+  }
 
   if (!response.ok) {
     const message = await response.text();

@@ -25,10 +25,29 @@ const allowedOrigins =
       ? new Set<string>()
       : localhostOrigins;
 
+const isOriginAllowed = (origin: string) => {
+  if (allowedOrigins.has(origin)) {
+    return true;
+  }
+
+  return [...allowedOrigins].some((allowedOrigin) => {
+    if (!allowedOrigin.includes('*')) {
+      return false;
+    }
+
+    const pattern = `^${allowedOrigin
+      .split('*')
+      .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+      .join('.*')}$`;
+
+    return new RegExp(pattern).test(origin);
+  });
+};
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.has(origin)) {
+      if (!origin || isOriginAllowed(origin)) {
         callback(null, true);
         return;
       }
