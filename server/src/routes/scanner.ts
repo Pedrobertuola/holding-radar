@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 
 import { getMarketScan } from '../services/marketScannerService';
 
@@ -14,64 +14,95 @@ const parseLimit = (value: unknown, fallback = 10) => {
   return Math.min(Math.floor(parsed), 50);
 };
 
+const handleScannerRequest = async <T>(
+  response: Response,
+  handler: () => Promise<T>,
+) => {
+  try {
+    response.json(await handler());
+  } catch (error) {
+    console.error('Falha ao executar scanner:', error);
+    response.status(503).json({
+      message:
+        'Scanner temporariamente indisponível. Verifique as variáveis DATABASE_URL, BRAPI_TOKEN e as migrations do banco no Render.',
+      detail:
+        process.env.NODE_ENV === 'production'
+          ? undefined
+          : error instanceof Error
+            ? error.message
+            : String(error),
+    });
+  }
+};
+
 scannerRouter.get('/', async (_request, response) => {
-  const scan = await getMarketScan();
-  response.json(scan);
+  await handleScannerRequest(response, () => getMarketScan());
 });
 
 scannerRouter.get('/top', async (request, response) => {
-  const scan = await getMarketScan();
-  const limit = parseLimit(request.query.limit);
+  await handleScannerRequest(response, async () => {
+    const scan = await getMarketScan();
+    const limit = parseLimit(request.query.limit);
 
-  response.json({
-    lastUpdated: scan.lastUpdated,
-    assets: scan.bestOverall.slice(0, limit),
-    failedTickers: scan.failedTickers,
+    return {
+      lastUpdated: scan.lastUpdated,
+      assets: scan.bestOverall.slice(0, limit),
+      failedTickers: scan.failedTickers,
+    };
   });
 });
 
 scannerRouter.get('/stocks', async (_request, response) => {
-  const scan = await getMarketScan();
-  response.json({
-    lastUpdated: scan.lastUpdated,
-    assets: scan.bestStocks,
+  await handleScannerRequest(response, async () => {
+    const scan = await getMarketScan();
+    return {
+      lastUpdated: scan.lastUpdated,
+      assets: scan.bestStocks,
+    };
   });
 });
 
 scannerRouter.get('/fiis', async (_request, response) => {
-  const scan = await getMarketScan();
-  response.json({
-    lastUpdated: scan.lastUpdated,
-    assets: scan.bestFiis,
+  await handleScannerRequest(response, async () => {
+    const scan = await getMarketScan();
+    return {
+      lastUpdated: scan.lastUpdated,
+      assets: scan.bestFiis,
+    };
   });
 });
 
 scannerRouter.get('/income', async (_request, response) => {
-  const scan = await getMarketScan();
-  response.json({
-    lastUpdated: scan.lastUpdated,
-    assets: scan.bestIncome,
+  await handleScannerRequest(response, async () => {
+    const scan = await getMarketScan();
+    return {
+      lastUpdated: scan.lastUpdated,
+      assets: scan.bestIncome,
+    };
   });
 });
 
 scannerRouter.get('/growth', async (_request, response) => {
-  const scan = await getMarketScan();
-  response.json({
-    lastUpdated: scan.lastUpdated,
-    assets: scan.bestGrowth,
+  await handleScannerRequest(response, async () => {
+    const scan = await getMarketScan();
+    return {
+      lastUpdated: scan.lastUpdated,
+      assets: scan.bestGrowth,
+    };
   });
 });
 
 scannerRouter.get('/insufficient-data', async (_request, response) => {
-  const scan = await getMarketScan();
-  response.json({
-    lastUpdated: scan.lastUpdated,
-    assets: scan.insufficientData,
-    failedTickers: scan.failedTickers,
+  await handleScannerRequest(response, async () => {
+    const scan = await getMarketScan();
+    return {
+      lastUpdated: scan.lastUpdated,
+      assets: scan.insufficientData,
+      failedTickers: scan.failedTickers,
+    };
   });
 });
 
 scannerRouter.post('/refresh', async (_request, response) => {
-  const scan = await getMarketScan(true);
-  response.json(scan);
+  await handleScannerRequest(response, () => getMarketScan(true));
 });

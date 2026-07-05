@@ -1632,6 +1632,14 @@ const isColdDatabaseScan = (scan: ScannerResult) =>
   scan.failedTickers.length === 0 &&
   scan.lastUpdated === new Date(0).toISOString();
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Erro desconhecido.';
+
+const withWarnings = (scan: ScannerResult, warnings: string[]) => ({
+  ...scan,
+  warnings: [...scan.warnings, ...warnings],
+});
+
 export const getMarketScan = async (
   forceRefresh = false,
 ): Promise<ScannerResult> => {
@@ -1642,13 +1650,21 @@ export const getMarketScan = async (
       return memoryCachedResult;
     }
 
-    const databaseCachedResult = await buildScannerFromDatabaseCache();
-    if (isColdDatabaseScan(databaseCachedResult)) {
-      return getMarketScan(true);
-    }
+    try {
+      const databaseCachedResult = await buildScannerFromDatabaseCache();
+      if (isColdDatabaseScan(databaseCachedResult)) {
+        return getMarketScan(true);
+      }
 
-    setScannerMemoryCache(databaseCachedResult);
-    return databaseCachedResult;
+      setScannerMemoryCache(databaseCachedResult);
+      return databaseCachedResult;
+    } catch (error) {
+      console.error('Falha ao carregar cache persistente do scanner:', error);
+      const refreshedResult = await getMarketScan(true);
+      return withWarnings(refreshedResult, [
+        `Cache persistente indisponível: ${getErrorMessage(error)}`,
+      ]);
+    }
   }
 
   if (inFlightScan) {
@@ -1657,17 +1673,28 @@ export const getMarketScan = async (
 
   inFlightScan = executeScan()
     .then(async (result) => {
-      await persistScannerRefresh(result);
+      try {
+        await persistScannerRefresh(result);
 
-      const refreshedResult = await buildScannerFromDatabaseCache(
-        new Set(result.assets.map((asset) => asset.ticker)),
-        result.failedTickers,
-        result.warnings,
-      );
+        const refreshedResult = await buildScannerFromDatabaseCache(
+          new Set(result.assets.map((asset) => asset.ticker)),
+          result.failedTickers,
+          result.warnings,
+        );
 
-      clearScannerMemoryCache();
-      setScannerMemoryCache(refreshedResult);
-      return refreshedResult;
+        clearScannerMemoryCache();
+        setScannerMemoryCache(refreshedResult);
+        return refreshedResult;
+      } catch (error) {
+        console.error('Falha ao persistir scanner no banco:', error);
+        const scanWithWarning = withWarnings(result, [
+          `Resultado gerado sem cache persistente: ${getErrorMessage(error)}`,
+        ]);
+
+        clearScannerMemoryCache();
+        setScannerMemoryCache(scanWithWarning);
+        return scanWithWarning;
+      }
     })
     .finally(() => {
       inFlightScan = null;
