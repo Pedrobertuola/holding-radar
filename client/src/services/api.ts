@@ -1,6 +1,7 @@
 import type { AiAnalysisResponse, Asset, ScannerResult } from '../types';
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+const rawApiBaseUrl = import.meta.env.VITE_API_URL ?? '';
+const apiBaseUrl = rawApiBaseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
 
 const requestJson = async <T>(
   path: string,

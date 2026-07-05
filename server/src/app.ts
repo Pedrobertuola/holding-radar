@@ -58,6 +58,25 @@ app.use(
 );
 app.use(express.json({ limit: '1mb' }));
 
+const apiInfo = {
+  app: 'API do Holding Radar',
+  status: 'ok',
+  message: 'Backend ativo. Use as rotas /api/health, /api/scanner e /api/assets.',
+  endpoints: {
+    health: '/api/health',
+    scanner: '/api/scanner',
+    assets: '/api/assets',
+  },
+};
+
+app.get('/', (_request, response) => {
+  response.json(apiInfo);
+});
+
+app.get('/api', (_request, response) => {
+  response.json(apiInfo);
+});
+
 app.get('/api/health', (_request, response) => {
   response.json({
     status: 'ok',
