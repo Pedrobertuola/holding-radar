@@ -104,5 +104,31 @@ scannerRouter.get('/insufficient-data', async (_request, response) => {
 });
 
 scannerRouter.post('/refresh', async (_request, response) => {
-  await handleScannerRequest(response, () => getMarketScan(true));
+  try {
+    const currentScan = await getMarketScan();
+
+    void getMarketScan(true).catch((error) => {
+      console.error('Falha na atualização em segundo plano do scanner:', error);
+    });
+
+    response.status(202).json({
+      ...currentScan,
+      warnings: [
+        ...currentScan.warnings,
+        'Atualização iniciada em segundo plano. Aguarde alguns minutos e recarregue o scanner.',
+      ],
+    });
+  } catch (error) {
+    console.error('Falha ao iniciar atualização do scanner:', error);
+    response.status(503).json({
+      message:
+        'Não foi possível iniciar a atualização do scanner. Verifique DATABASE_URL, BRAPI_TOKEN e os logs do Render.',
+      detail:
+        process.env.NODE_ENV === 'production'
+          ? undefined
+          : error instanceof Error
+            ? error.message
+            : String(error),
+    });
+  }
 });
