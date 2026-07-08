@@ -88,8 +88,8 @@ function InsufficientDataSection({
         <div>
           <h2 className="text-lg font-bold text-slate-950">Dados insuficientes</h2>
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            Ativos mantidos fora do ranking porque a Brapi não retornou campos
-            mínimos para pontuação.
+            Ativos mantidos fora do ranking porque as fontes disponíveis não
+            retornaram campos mínimos para pontuação.
           </p>
         </div>
         <span className="inline-flex w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
@@ -211,9 +211,9 @@ export function DashboardPage() {
               Holding Radar
             </h1>
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
-              O app varre um universo amplo de ações brasileiras e FIIs, busca
-              dados reais na Brapi, remove ativos incompletos e ranqueia as
-              melhores oportunidades educacionais do momento.
+              O app varre um universo amplo de ações brasileiras e FIIs, cruza
+              dados da Brapi, CVM e Banco Central, remove ativos incompletos e
+              ranqueia oportunidades educacionais com critérios objetivos.
             </p>
           </div>
           <Disclaimer />
@@ -270,7 +270,7 @@ export function DashboardPage() {
                 Filtros e ordenação
               </div>
               <p className="mt-1 text-sm text-slate-500">
-                Explore os ativos válidos sem refazer chamadas à Brapi no
+                Explore os ativos válidos sem refazer chamadas aos provedores no
                 navegador.
               </p>
             </div>
@@ -363,8 +363,8 @@ export function DashboardPage() {
                 </div>
                 <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
                   {scanner.dataMode === 'brapi-amplo'
-                    ? 'Brapi amplo'
-                    : 'Brapi limitado'}
+                    ? 'Fontes integradas'
+                    : 'Modo limitado'}
                 </span>
               </div>
 

@@ -7,8 +7,9 @@ export function Disclaimer() {
         <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
         <p>
           Este app tem fins exclusivamente educacionais e não fornece
-          recomendações personalizadas de investimento. Os indicadores vêm da
-          Brapi e podem ter atraso, limitações de cobertura ou campos ausentes.
+          recomendações personalizadas de investimento. Os indicadores vêm de
+          fontes integradas como Brapi, CVM e Banco Central, podendo ter atraso,
+          limitações de cobertura ou campos ausentes.
         </p>
       </div>
     </div>
