@@ -1,4 +1,9 @@
-import type { AiAnalysisResponse, Asset, ScannerResult } from '../types';
+import type {
+  AiAnalysisResponse,
+  Asset,
+  ScannerInsightResponse,
+  ScannerResult,
+} from '../types';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_URL ?? '';
 const apiBaseUrl = rawApiBaseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
@@ -77,4 +82,9 @@ export const generateAiAnalysis = async (asset: Asset) =>
   requestJson<AiAnalysisResponse>('/api/ai/analyze', {
     method: 'POST',
     body: JSON.stringify({ ticker: asset.ticker }),
+  });
+
+export const generateScannerInsight = async () =>
+  requestJson<ScannerInsightResponse>('/api/ai/scanner-insight', {
+    method: 'POST',
   });

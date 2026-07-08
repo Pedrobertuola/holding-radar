@@ -7,13 +7,25 @@ import {
   Loader2,
   RefreshCw,
   SlidersHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AssetCard } from '../components/AssetCard';
 import { Disclaimer } from '../components/Disclaimer';
-import { getScanner, refreshScanner } from '../services/api';
-import type { Asset, AssetType, InsufficientDataAsset, ScannerResult } from '../types';
+import {
+  generateScannerInsight,
+  getScanner,
+  refreshScanner,
+} from '../services/api';
+import type {
+  Asset,
+  AssetType,
+  InsufficientDataAsset,
+  ScannerInsightItem,
+  ScannerInsightResponse,
+  ScannerResult,
+} from '../types';
 import { formatShortScore } from '../utils/format';
 
 type SortKey = 'score' | 'dividendYield' | 'valuation' | 'risk';
@@ -129,6 +141,148 @@ function InsufficientDataSection({
   );
 }
 
+function InsightColumn({
+  title,
+  items,
+  tone = 'neutral',
+}: {
+  title: string;
+  items: ScannerInsightItem[];
+  tone?: 'positive' | 'warning' | 'neutral';
+}) {
+  const toneClass =
+    tone === 'positive'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+      : tone === 'warning'
+        ? 'border-amber-200 bg-amber-50 text-amber-950'
+        : 'border-slate-200 bg-slate-50 text-slate-950';
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-bold text-slate-950">{title}</h3>
+      <div className="space-y-2">
+        {items.length > 0 ? (
+          items.map((item) => (
+            <article
+              key={`${title}-${item.ticker ?? item.title}`}
+              className={`rounded-md border p-3 ${toneClass}`}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                {item.ticker ? (
+                  <span className="rounded-full border border-white/60 bg-white/70 px-2 py-0.5 text-xs font-bold">
+                    {item.ticker}
+                  </span>
+                ) : null}
+                <h4 className="text-sm font-semibold">{item.title}</h4>
+              </div>
+              <p className="mt-2 text-sm leading-6 opacity-85">
+                {item.description}
+              </p>
+            </article>
+          ))
+        ) : (
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+            Sem destaques suficientes nesta categoria.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ScannerInsightPanel({
+  insight,
+  isLoading,
+  error,
+  onGenerate,
+}: {
+  insight: ScannerInsightResponse | null;
+  isLoading: boolean;
+  error: string | null;
+  onGenerate: () => void;
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-600">
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            Leitura inteligente
+          </div>
+          <h2 className="mt-3 text-lg font-bold text-slate-950">
+            Interpretação do radar com IA
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+            A IA interpreta o ranking, destaca ativos que passaram melhor pelos
+            filtros objetivos, aponta cautelas e sinaliza lacunas de dados. A
+            leitura é educacional e não usa informações pessoais.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={isLoading}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400"
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+          )}
+          Gerar leitura inteligente
+        </button>
+      </div>
+
+      {error ? (
+        <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          {error}
+        </div>
+      ) : null}
+
+      {insight ? (
+        <div className="mt-5 space-y-5">
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+              <span>
+                {insight.source === 'openai'
+                  ? 'Gerado pela OpenAI'
+                  : insight.source === 'cache'
+                    ? 'Leitura em cache'
+                    : 'Leitura local'}
+              </span>
+              <span aria-hidden="true">•</span>
+              <span>
+                Scanner de {formatDateTime(insight.scanLastUpdated)}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-7 text-slate-700">
+              {insight.overview}
+            </p>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <InsightColumn
+              title="Destaques objetivos"
+              items={insight.opportunityHighlights}
+              tone="positive"
+            />
+            <InsightColumn
+              title="Cautelas do ranking"
+              items={insight.cautionHighlights}
+              tone="warning"
+            />
+            <InsightColumn title="Lacunas de dados" items={insight.dataGaps} />
+            <InsightColumn
+              title="Pontos para monitorar"
+              items={insight.monitorPoints}
+            />
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export function DashboardPage() {
   const [scanner, setScanner] = useState<ScannerResult | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('score');
@@ -137,6 +291,10 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scannerInsight, setScannerInsight] =
+    useState<ScannerInsightResponse | null>(null);
+  const [isInsightLoading, setIsInsightLoading] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -187,6 +345,7 @@ export function DashboardPage() {
     try {
       const result = await refreshScanner();
       setScanner(result);
+      setScannerInsight(null);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -195,6 +354,24 @@ export function DashboardPage() {
       );
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleGenerateScannerInsight = async () => {
+    setIsInsightLoading(true);
+    setInsightError(null);
+
+    try {
+      const result = await generateScannerInsight();
+      setScannerInsight(result);
+    } catch (requestError) {
+      setInsightError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Não foi possível gerar a leitura inteligente do radar.',
+      );
+    } finally {
+      setIsInsightLoading(false);
     }
   };
 
@@ -416,6 +593,13 @@ export function DashboardPage() {
                 </div>
               ) : null}
             </section>
+
+            <ScannerInsightPanel
+              insight={scannerInsight}
+              isLoading={isInsightLoading}
+              error={insightError}
+              onGenerate={handleGenerateScannerInsight}
+            />
 
             <AssetSection
               title="Top oportunidades hoje"

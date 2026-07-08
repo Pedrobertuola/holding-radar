@@ -1,7 +1,10 @@
 import { Router } from 'express';
 
-import { generateEducationalAnalysis } from '../services/aiAnalysis';
-import { findScoredAsset } from '../services/marketScannerService';
+import {
+  generateEducationalAnalysis,
+  generateScannerInsight,
+} from '../services/aiAnalysis';
+import { findScoredAsset, getMarketScan } from '../services/marketScannerService';
 
 export const aiRouter = Router();
 
@@ -44,4 +47,24 @@ aiRouter.post('/analyze', async (request, response) => {
 
   const result = await generateEducationalAnalysis(asset);
   response.json(result);
+});
+
+aiRouter.post('/scanner-insight', async (_request, response) => {
+  try {
+    const scan = await getMarketScan();
+    const result = await generateScannerInsight(scan);
+    response.json(result);
+  } catch (error) {
+    console.error('Falha ao gerar leitura inteligente do scanner:', error);
+    response.status(503).json({
+      message:
+        'Não foi possível gerar a leitura inteligente do radar neste momento.',
+      detail:
+        process.env.NODE_ENV === 'production'
+          ? undefined
+          : error instanceof Error
+            ? error.message
+            : String(error),
+    });
+  }
 });

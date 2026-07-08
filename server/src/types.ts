@@ -159,3 +159,20 @@ export interface AiAnalysisResponse {
   analysis: string;
   source: 'openai' | 'fallback' | 'cache';
 }
+
+export interface ScannerInsightItem {
+  ticker?: string;
+  title: string;
+  description: string;
+}
+
+export interface ScannerInsightResponse {
+  source: 'openai' | 'fallback' | 'cache';
+  generatedAt: string;
+  scanLastUpdated: string;
+  overview: string;
+  opportunityHighlights: ScannerInsightItem[];
+  cautionHighlights: ScannerInsightItem[];
+  dataGaps: ScannerInsightItem[];
+  monitorPoints: ScannerInsightItem[];
+}
