@@ -22,7 +22,7 @@ export function ScoreBreakdownChart({ scores }: ScoreBreakdownChartProps) {
     ...(scores.growth !== undefined
       ? [{ label: 'Crescimento', value: scores.growth }]
       : []),
-    { label: 'Risco', value: scores.risk },
+    { label: 'Segurança', value: scores.risk },
     { label: 'Final', value: scores.final },
   ];
 

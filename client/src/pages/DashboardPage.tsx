@@ -247,7 +247,7 @@ function ScannerInsightPanel({
                 {insight.source === 'openai'
                   ? 'Gerado pela OpenAI'
                   : insight.source === 'cache'
-                    ? 'Leitura em cache'
+                    ? 'Leitura reaproveitada'
                     : 'Leitura local'}
               </span>
               <span aria-hidden="true">•</span>
@@ -477,7 +477,7 @@ export function DashboardPage() {
                 <option value="score">Pontuação</option>
                 <option value="dividendYield">Dividend yield</option>
                 <option value="valuation">Valuation</option>
-                <option value="risk">Risco menor</option>
+                <option value="risk">Maior segurança</option>
               </select>
             </label>
 
@@ -603,17 +603,17 @@ export function DashboardPage() {
 
             <AssetSection
               title="Top oportunidades hoje"
-              description="Melhores combinações de qualidade, valuation, renda, crescimento e risco."
+              description="Melhores combinações de qualidade, valuation, renda, crescimento e risco controlado."
               assets={scanner.bestOverall}
             />
             <AssetSection
               title="Melhores ações"
-              description="Ações com melhor pontuação composta entre fundamentos, preço e risco."
+              description="Ações com melhor pontuação composta entre fundamentos, preço e segurança."
               assets={scanner.bestStocks}
             />
             <AssetSection
               title="Melhores FIIs"
-              description="FIIs com renda, P/VP e risco em melhor equilíbrio."
+              description="FIIs com renda, P/VP e risco controlado em melhor equilíbrio."
               assets={scanner.bestFiis}
             />
             <AssetSection
@@ -633,7 +633,7 @@ export function DashboardPage() {
             />
             <AssetSection
               title="Baratas, mas arriscadas"
-              description="Ativos com preço chamativo, mas fundamentos ou risco mais frágeis."
+              description="Ativos com preço chamativo, mas fundamentos ou segurança mais frágeis."
               assets={scanner.cheapButRisky}
             />
 

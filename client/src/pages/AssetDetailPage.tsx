@@ -280,8 +280,12 @@ export function AssetDetailPage() {
                   {asset.scores.growth !== undefined ? (
                     <ScoreBar label="Crescimento" value={asset.scores.growth} />
                   ) : null}
-                  <ScoreBar label="Risco" value={asset.scores.risk} />
+                  <ScoreBar label="Segurança" value={asset.scores.risk} />
                 </div>
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  Na métrica de segurança, quanto maior a nota, menor o risco
+                  relativo estimado pelo modelo.
+                </p>
                 <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-4">
                   <div className="text-sm font-medium text-slate-500">
                     Pontuação final

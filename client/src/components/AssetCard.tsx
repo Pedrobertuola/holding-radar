@@ -108,7 +108,7 @@ export function AssetCard({ asset }: AssetCardProps) {
           </div>
         </div>
         <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-          <div className="text-xs font-medium text-slate-500">Risco</div>
+          <div className="text-xs font-medium text-slate-500">Segurança</div>
           <div className="mt-1 text-sm font-semibold text-slate-950">
             {formatShortScore(asset.scores.risk)}
           </div>
@@ -122,7 +122,7 @@ export function AssetCard({ asset }: AssetCardProps) {
         {asset.scores.growth !== undefined ? (
           <ScoreBar label="Crescimento" value={asset.scores.growth} />
         ) : null}
-        <ScoreBar label="Risco" value={asset.scores.risk} />
+        <ScoreBar label="Segurança" value={asset.scores.risk} />
       </div>
 
       <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">

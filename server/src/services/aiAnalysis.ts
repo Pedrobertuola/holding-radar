@@ -40,6 +40,8 @@ let scannerInsightCache:
     }
   | undefined;
 
+const SCANNER_INSIGHT_VERSION = 'v2';
+
 const buildPrompt = (asset: Asset) => `
 Você é um analista educacional de fundamentos para investidores brasileiros.
 Escreva em português do Brasil, de forma clara e profissional.
@@ -139,11 +141,107 @@ const compactAssetForScannerInsight = (asset: Asset) => ({
 
 const getScannerInsightCacheKey = (scan: ScannerResult) =>
   [
+    SCANNER_INSIGHT_VERSION,
     scan.lastUpdated,
     scan.assets.slice(0, 8).map((asset) => `${asset.ticker}:${asset.scores.final}`).join('|'),
     scan.failedTickers.length,
     scan.insufficientData.length,
   ].join('::');
+
+const formatInsightScore = (value: number) => Math.round(value).toString();
+
+const formatInsightPercent = (value?: number) =>
+  value === undefined
+    ? 'não informado'
+    : `${(value * 100).toLocaleString('pt-BR', {
+        maximumFractionDigits: 1,
+      })}%`;
+
+const formatInsightMultiple = (value?: number) =>
+  value === undefined
+    ? 'não informado'
+    : value.toLocaleString('pt-BR', {
+        maximumFractionDigits: 2,
+      });
+
+const describeMainStrength = (asset: Asset) => {
+  const entries = [
+    ['qualidade', asset.scores.quality],
+    ['valuation/preço', asset.scores.price],
+    ['renda', asset.scores.income],
+    ...(asset.scores.growth !== undefined
+      ? ([['crescimento', asset.scores.growth]] as [string, number][])
+      : []),
+    ['segurança', asset.scores.risk],
+  ] as [string, number][];
+  const [label, score] = entries.sort((a, b) => b[1] - a[1])[0];
+
+  return `${label} foi o fator mais forte (${formatInsightScore(score)}/100)`;
+};
+
+const describeMainTradeOff = (asset: Asset) => {
+  const entries = [
+    ['qualidade', asset.scores.quality],
+    ['valuation/preço', asset.scores.price],
+    ['renda', asset.scores.income],
+    ...(asset.scores.growth !== undefined
+      ? ([['crescimento', asset.scores.growth]] as [string, number][])
+      : []),
+    ['segurança', asset.scores.risk],
+  ] as [string, number][];
+  const [label, score] = entries.sort((a, b) => a[1] - b[1])[0];
+
+  return `${label} foi o ponto relativamente mais fraco (${formatInsightScore(score)}/100)`;
+};
+
+const describeAssetContext = (asset: Asset) => {
+  if (asset.type === 'FII') {
+    const fiiType = asset.fiiProfile?.typeLabel ?? 'tipo de FII não identificado';
+    const creditRisk = asset.fiiProfile?.creditRiskLabel ?? 'risco de CRIs não informado';
+    const diversification =
+      asset.fiiProfile?.diversificationLabel ?? 'diversificação não informada';
+
+    return `${fiiType}; P/VP ${formatInsightMultiple(
+      asset.metrics.pvp,
+    )}; DY ${formatInsightPercent(
+      asset.metrics.dividendYield,
+    )}; diversificação ${diversification}; leitura de CRIs: ${creditRisk}.`;
+  }
+
+  return `Setor ${asset.sector}; P/L ${formatInsightMultiple(
+    asset.metrics.pl,
+  )}; ROE ${formatInsightPercent(
+    asset.metrics.roe,
+  )}; DY ${formatInsightPercent(asset.metrics.dividendYield)}.`;
+};
+
+const buildOpportunityDescription = (asset: Asset) =>
+  [
+    `${asset.statusLabel}.`,
+    `${describeMainStrength(asset)} e ${describeMainTradeOff(asset)}.`,
+    describeAssetContext(asset),
+    `A nota de segurança ${formatInsightScore(
+      asset.scores.risk,
+    )}/100 significa menor risco relativo dentro do modelo, não ausência de risco.`,
+  ].join(' ');
+
+const buildValuationCautionDescription = (asset: Asset) =>
+  [
+    `O ativo aparece como "Excelente, mas caro" porque a qualidade ficou forte (${formatInsightScore(
+      asset.scores.quality,
+    )}/100), mas o preço/valuation não acompanhou no mesmo nível (${formatInsightScore(
+      asset.scores.price,
+    )}/100).`,
+    describeAssetContext(asset),
+    'A leitura inteligente trata isso como bom ativo para estudo, porém com margem de segurança menor no preço atual.',
+  ].join(' ');
+
+const buildRiskyCautionDescription = (asset: Asset) =>
+  [
+    `O ativo aparece como "Barato, mas arriscado" porque o preço ou a renda chamam atenção, mas a qualidade ou a segurança relativa ficam mais pressionadas.`,
+    `Forças: ${describeMainStrength(asset)}. Fragilidade: ${describeMainTradeOff(asset)}.`,
+    describeAssetContext(asset),
+  ].join(' ');
 
 const buildLocalScannerInsight = (
   scan: ScannerResult,
@@ -161,50 +259,53 @@ const buildLocalScannerInsight = (
     source,
     generatedAt: new Date().toISOString(),
     scanLastUpdated: scan.lastUpdated,
-    overview: `O radar analisou ${scan.analyzedCount} de ${scan.universe.total} ativos. A leitura prioriza combinações de qualidade, valuation, renda, crescimento e risco, com ${staleLabel}. Os destaques abaixo são pontos de estudo, não recomendações personalizadas.`,
+    overview: `O radar analisou ${scan.analyzedCount} de ${scan.universe.total} ativos. A leitura não escolhe ativos por um único indicador: ela procura equilíbrio entre qualidade, valuation, renda/crescimento e segurança relativa, com ${staleLabel}. Os destaques abaixo mostram hipóteses de estudo e pontos de atenção, não recomendações personalizadas.`,
     opportunityHighlights: topAssets.map((asset) => ({
       ticker: asset.ticker,
-      title: `${asset.ticker} aparece bem posicionado no ranking`,
-      description: `${asset.statusLabel}. Pontuação final ${Math.round(
-        asset.scores.final,
-      )}, com qualidade ${Math.round(asset.scores.quality)}, preço ${Math.round(
-        asset.scores.price,
-      )}, renda ${Math.round(asset.scores.income)} e risco ${Math.round(
-        asset.scores.risk,
-      )}.`,
+      title: `${asset.ticker} combina força e ponto de atenção claro`,
+      description: buildOpportunityDescription(asset),
     })),
     cautionHighlights: [
       ...expensiveAssets.map((asset) => ({
         ticker: asset.ticker,
         title: `${asset.ticker} tem qualidade, mas valuation pesa`,
-        description: `O ativo entrou em "Excelente, mas caro", sinalizando bons fundamentos relativos com preço menos confortável dentro dos filtros atuais.`,
+        description: buildValuationCautionDescription(asset),
       })),
       ...riskyAssets.map((asset) => ({
         ticker: asset.ticker,
-        title: `${asset.ticker} exige cautela pelo risco`,
-        description: `O ativo entrou em "Barato, mas arriscado". O desconto ou yield não deve ser lido isoladamente dos fundamentos e riscos apontados pelo scanner.`,
+        title: `${asset.ticker} tem preço chamativo, mas segurança menor`,
+        description: buildRiskyCautionDescription(asset),
       })),
     ].slice(0, 4),
     dataGaps: [
       {
         title: 'Ativos fora do ranking por dados insuficientes',
-        description: `${scan.insufficientData.length} ativo(s) ficaram fora do ranking por campos ausentes e ${scan.failedTickers.length} ticker(s) tiveram falha de provedor.`,
+        description: `${scan.insufficientData.length} ativo(s) ficaram fora do ranking por campos ausentes e ${scan.failedTickers.length} ticker(s) tiveram falha de provedor. Esses ativos não entram como oportunidade porque o modelo não tem evidência mínima para pontuar.`,
       },
       {
-        title: 'Qualidade das fontes',
+        title: 'Dados defasados reduzem confiança',
+        description: `${scan.usedCachedData} ativo(s) usaram cache e ${scan.staleAssets} aparecem como defasados. A leitura continua útil para triagem, mas perde força como fotografia do dia.`,
+      },
+      {
+        title: 'Lacunas qualitativas em FIIs',
         description:
-          'Quando a fonte não traz imóveis, devedores, garantias, ratings ou concentração de CRIs, o app sinaliza a lacuna em vez de completar com suposições.',
+          'Quando a fonte não traz imóveis, devedores, garantias, ratings, indexadores ou concentração de CRIs, o app sinaliza a lacuna em vez de completar com suposições.',
       },
     ],
     monitorPoints: [
       {
         title: 'Atualização dos dados',
-        description: `Acompanhar se a próxima varredura reduz dados em cache (${scan.usedCachedData}) e dados defasados (${scan.staleAssets}).`,
+        description: `Monitorar se a próxima varredura reduz dados em cache (${scan.usedCachedData}) e dados defasados (${scan.staleAssets}), porque isso aumenta a confiança do ranking.`,
       },
       {
         title: 'Coerência entre preço e qualidade',
         description:
-          'Priorizar a leitura combinada entre qualidade, valuation, renda/crescimento e risco, evitando olhar apenas dividend yield, P/VP ou queda de preço.',
+          'Separar ativos que são bons e caros de ativos baratos por fragilidade. O radar fica mais útil quando mostra o motivo do desconto, não só o desconto.',
+      },
+      {
+        title: 'Segurança não é ausência de risco',
+        description:
+          'A nota de segurança é positiva: quanto maior, menor o risco relativo no modelo. Ela não elimina riscos de mercado, dados atrasados, eventos corporativos ou problemas específicos de cada ativo.',
       },
     ],
   };
@@ -275,14 +376,16 @@ Regras obrigatórias:
 - Não prometa rentabilidade.
 - Não invente dados, imóveis, CRIs, devedores, ratings, garantias, indexadores ou concentração.
 - Se houver lacuna de dados, destaque a lacuna como ponto de atenção.
-- Explique por que alguns ativos se destacaram objetivamente no scanner.
+- Explique por que alguns ativos se destacaram objetivamente no scanner, sem repetir apenas os números.
+- Compare forças e fragilidades: qualidade versus preço, renda versus sustentabilidade, crescimento versus segurança.
+- Trate scores.risk como nota de segurança relativa: quanto maior, menor o risco relativo no modelo.
 - Use linguagem de research educacional, como "passou melhor pelos filtros", "merece estudo adicional", "ponto de atenção" e "monitorar".
 
 Responda somente JSON válido neste formato:
 {
   "overview": "resumo executivo em 2 ou 3 frases",
   "opportunityHighlights": [
-    { "ticker": "TICKER", "title": "título curto", "description": "por que apareceu bem no radar" }
+    { "ticker": "TICKER", "title": "título curto", "description": "por que apareceu bem no radar, citando também o principal ponto fraco" }
   ],
   "cautionHighlights": [
     { "ticker": "TICKER", "title": "título curto", "description": "risco, valuation ou fragilidade" }
