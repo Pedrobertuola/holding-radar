@@ -15,7 +15,7 @@ Mesmo assim, a percepção visual e de produto ainda pode parecer mais fraca do 
 - Ativos com dados insuficientes ficam fora do ranking.
 - O backend diferencia dados frescos, dados em cache e dados defasados.
 - FIIs possuem leitura específica por tipo de fundo, diversificação e risco de crédito por proxies.
-- A IA é acionada sob demanda e recebe instruções para não inventar dados nem emitir recomendação personalizada.
+- A IA já pode enriquecer análises sob demanda e recebe instruções para não inventar dados nem emitir recomendação personalizada.
 
 ## O Que Faz O App Parecer Menos Profissional Hoje
 
@@ -95,17 +95,31 @@ O botão de atualização deveria mostrar:
 
 Isso evita a sensação de que o app travou.
 
-### 5. Melhorar o uso da IA
+### 5. Transformar a IA em uma camada real de inteligência
 
-A IA deve continuar sem escolher ativos automaticamente. O melhor uso é:
+A IA não precisa ficar limitada ao botão de análise individual. Ela pode participar mais do produto como uma camada de interpretação e curadoria objetiva, desde que não faça recomendação personalizada.
 
+Melhor uso:
+
+- explicar por que os primeiros colocados apareceram no topo;
+- gerar um resumo executivo do "Radar de hoje";
+- destacar divergências entre qualidade, valuation e risco;
+- apontar quais ativos parecem bons, mas caros;
+- apontar quais parecem baratos, mas frágeis;
 - aprofundar um ativo já selecionado;
 - explicar lacunas de dados;
 - comparar leitura de FII de papel versus tijolo;
 - resumir riscos que precisam ser monitorados;
 - citar fontes quando usar busca web.
 
-O ideal é adicionar no detalhe do ativo uma área "Perguntas para investigar", gerada pela IA, sem transformar isso em recomendação.
+O ideal é criar uma área "Leitura inteligente do radar", gerada pela IA, com linguagem como:
+
+- "ativos que passaram melhor pelos filtros objetivos";
+- "ativos que merecem estudo adicional";
+- "pontos de atenção antes de qualquer decisão";
+- "dados ausentes que reduzem a confiança da análise".
+
+Essa abordagem usa inteligência de verdade sem dizer ao usuário o que comprar ou vender.
 
 ### 6. Melhorar o visual do dashboard
 
@@ -127,6 +141,7 @@ O app ficaria mais profissional com:
 - Melhorar mensagens do refresh assíncrono.
 - Exibir tipo de FII diretamente nos cards.
 - Adicionar um painel simples de metodologia.
+- Adicionar resumo inteligente do radar com IA, explicando os destaques do dia sem recomendação personalizada.
 
 ### Prioridade Média
 

@@ -14,7 +14,7 @@ O projeto nasceu para resolver um problema comum: investidores encontram muitas 
 - Classifica oportunidades por qualidade, valuation, renda, crescimento e risco.
 - Separa ações, FIIs, foco em renda, foco em crescimento, ativos excelentes mas caros e ativos baratos mas arriscados.
 - Mostra status de atualização, dados em cache, dados defasados e tickers com falha.
-- Gera análise educacional com IA sob demanda, apenas para ativos com dados válidos.
+- Usa IA como camada de inteligência para enriquecer leituras, explicar rankings e aprofundar ativos com dados válidos.
 
 ## Diferencial
 
@@ -31,7 +31,7 @@ O projeto usa uma arquitetura preparada para múltiplos provedores:
 - **Brapi:** cotações, estatísticas, fundamentos e indicadores disponíveis por ativo.
 - **CVM Dados Abertos:** informes mensais de FIIs, patrimônio, valor patrimonial por cota, cotistas, rendimentos e composição agregada.
 - **Banco Central SGS:** contexto macroeconômico, como Selic, CDI e IPCA.
-- **OpenAI:** análise educacional sob demanda, com regras de compliance para evitar recomendação personalizada.
+- **OpenAI:** apoio analítico para explicar rankings, cruzar contexto qualitativo e aprofundar ativos, com regras de compliance para evitar recomendação personalizada.
 
 O universo estático armazena somente tickers reais. Preços, múltiplos, dividendos e demais indicadores vêm das fontes externas.
 
@@ -57,9 +57,11 @@ Os ativos podem receber rótulos como:
 
 Esses rótulos são analíticos e educacionais. Eles não significam recomendação de compra, venda ou manutenção.
 
-## IA Com Responsabilidade
+## Inteligência Artificial No Produto
 
-A IA não escolhe ativos para o usuário e não roda durante a varredura do mercado. Ela entra apenas quando o usuário seleciona um ativo válido e pede uma análise educacional.
+A IA deve atuar como uma camada de inteligência sobre o scanner. Ela pode ajudar a interpretar os melhores ativos do ranking, explicar por que uma ação ou FII se destacou, comparar pontos fortes e riscos, identificar lacunas de dados e enriquecer a análise com contexto qualitativo quando houver fonte confiável.
+
+O limite é importante: a IA não deve transformar essa leitura em recomendação personalizada. O app pode dizer que um ativo passou bem pelos filtros objetivos, que parece caro, que exige cautela ou que tem riscos relevantes. Ele não deve dizer ao usuário para comprar, vender ou montar carteira com base em dados pessoais.
 
 O prompt da análise exige:
 
@@ -67,6 +69,7 @@ O prompt da análise exige:
 - separação entre dado confirmado e dado ausente;
 - explicação dos fatores de qualidade, preço, renda, crescimento e risco;
 - aprofundamento específico para FIIs;
+- apoio para entender por que o ativo apareceu bem ou mal no radar;
 - ausência de promessas de retorno;
 - ausência de recomendação personalizada.
 
