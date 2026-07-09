@@ -84,7 +84,10 @@ export const generateAiAnalysis = async (asset: Asset) =>
     body: JSON.stringify({ ticker: asset.ticker }),
   });
 
-export const generateScannerInsight = async () =>
+export const generateScannerInsight = async (
+  options = { force: true, includeNews: true },
+) =>
   requestJson<ScannerInsightResponse>('/api/ai/scanner-insight', {
     method: 'POST',
+    body: JSON.stringify(options),
   });

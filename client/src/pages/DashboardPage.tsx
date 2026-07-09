@@ -65,6 +65,15 @@ function sortAssets(assets: Asset[], sortKey: SortKey) {
   return sorted.sort((a, b) => b.scores.final - a.scores.final);
 }
 
+const delay = (milliseconds: number) =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+
+function isOlderThanHours(value: string, hours: number) {
+  return Date.now() - new Date(value).getTime() > hours * 60 * 60 * 1000;
+}
+
 function AssetSection({ title, description, assets }: AssetSectionProps) {
   return (
     <section className="space-y-3">
@@ -213,9 +222,10 @@ function ScannerInsightPanel({
             Interpretação do radar com IA
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-            A IA interpreta o ranking, destaca ativos que passaram melhor pelos
-            filtros objetivos, aponta cautelas e sinaliza lacunas de dados. A
-            leitura é educacional e não usa informações pessoais.
+            A IA cruza o ranking com contexto qualitativo e, quando disponível,
+            notícias recentes via busca web. Ela monta uma seleção de ativos
+            para estudo, aponta cautelas e sinaliza lacunas de dados sem usar
+            informações pessoais.
           </p>
         </div>
         <button
@@ -229,7 +239,7 @@ function ScannerInsightPanel({
           ) : (
             <Sparkles className="h-4 w-4" aria-hidden="true" />
           )}
-          Gerar leitura inteligente
+          Gerar leitura com IA e notícias
         </button>
       </div>
 
@@ -245,7 +255,9 @@ function ScannerInsightPanel({
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
               <span>
                 {insight.source === 'openai'
-                  ? 'Gerado pela OpenAI'
+                  ? insight.usedNewsSearch
+                    ? 'OpenAI com busca de notícias'
+                    : 'Gerado pela OpenAI'
                   : insight.source === 'cache'
                     ? 'Leitura reaproveitada'
                     : 'Leitura local'}
@@ -261,6 +273,20 @@ function ScannerInsightPanel({
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
+            <InsightColumn
+              title="Seleção assistida pela IA"
+              items={
+                insight.aiShortlist.length > 0
+                  ? insight.aiShortlist
+                  : insight.opportunityHighlights
+              }
+              tone="positive"
+            />
+            <InsightColumn
+              title="Notícias e contexto recente"
+              items={insight.newsContext}
+              tone={insight.usedNewsSearch ? 'warning' : 'neutral'}
+            />
             <InsightColumn
               title="Destaques objetivos"
               items={insight.opportunityHighlights}
@@ -291,6 +317,7 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
   const [scannerInsight, setScannerInsight] =
     useState<ScannerInsightResponse | null>(null);
   const [isInsightLoading, setIsInsightLoading] = useState(false);
@@ -341,11 +368,37 @@ export function DashboardPage() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     setError(null);
+    setRefreshNotice(null);
 
     try {
+      const previousLastUpdated = scanner?.lastUpdated;
       const result = await refreshScanner();
       setScanner(result);
       setScannerInsight(null);
+      setRefreshNotice(
+        'Atualização iniciada no backend. Vou verificar se um novo snapshot ficou disponível.',
+      );
+
+      for (const waitTime of [15000, 30000, 45000]) {
+        await delay(waitTime);
+        const latest = await getScanner();
+        setScanner(latest);
+
+        if (
+          previousLastUpdated &&
+          latest.lastUpdated !== previousLastUpdated &&
+          latest.successfulFreshFetches > 0
+        ) {
+          setRefreshNotice(
+            `Scanner atualizado com ${latest.successfulFreshFetches} dado(s) fresco(s).`,
+          );
+          return;
+        }
+      }
+
+      setRefreshNotice(
+        'O backend respondeu, mas o ranking ainda parece usar cache ou dados defasados. Isso normalmente indica limite da API, falha parcial de provedor ou ausência de campos novos.',
+      );
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -521,6 +574,20 @@ export function DashboardPage() {
           <div className="flex gap-3 rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
             <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden="true" />
             <span>{error}</span>
+          </div>
+        ) : null}
+
+        {refreshNotice ? (
+          <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
+            {refreshNotice}
+          </div>
+        ) : null}
+
+        {scanner && isOlderThanHours(scanner.lastUpdated, 24) ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            O último snapshot tem mais de 24 horas. O ranking continua visível
+            para análise histórica, mas a leitura do dia depende de uma nova
+            varredura com dados frescos dos provedores.
           </div>
         ) : null}
 

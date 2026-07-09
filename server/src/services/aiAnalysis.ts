@@ -33,6 +33,11 @@ const hasProhibitedTerms = (text: string) => {
 const useOpenAiWebSearch = () =>
   process.env.OPENAI_ENABLE_WEB_SEARCH === 'true';
 
+interface ScannerInsightOptions {
+  forceRefresh?: boolean;
+  includeNews?: boolean;
+}
+
 let scannerInsightCache:
   | {
       key: string;
@@ -40,7 +45,7 @@ let scannerInsightCache:
     }
   | undefined;
 
-const SCANNER_INSIGHT_VERSION = 'v2';
+const SCANNER_INSIGHT_VERSION = 'v3-news-selection';
 
 const buildPrompt = (asset: Asset) => `
 Você é um analista educacional de fundamentos para investidores brasileiros.
@@ -139,10 +144,11 @@ const compactAssetForScannerInsight = (asset: Asset) => ({
   valuationNotes: asset.valuationNotes.slice(0, 2),
 });
 
-const getScannerInsightCacheKey = (scan: ScannerResult) =>
+const getScannerInsightCacheKey = (scan: ScannerResult, allowNewsSearch: boolean) =>
   [
     SCANNER_INSIGHT_VERSION,
     scan.lastUpdated,
+    allowNewsSearch ? 'web-search-on' : 'web-search-off',
     scan.assets.slice(0, 8).map((asset) => `${asset.ticker}:${asset.scores.final}`).join('|'),
     scan.failedTickers.length,
     scan.insufficientData.length,
@@ -248,6 +254,14 @@ const buildLocalScannerInsight = (
   source: ScannerInsightResponse['source'] = 'fallback',
 ): ScannerInsightResponse => {
   const topAssets = scan.bestOverall.slice(0, 3);
+  const balancedAssets = scan.assets
+    .filter(
+      (asset) =>
+        asset.scores.quality >= 65 &&
+        asset.scores.price >= 55 &&
+        asset.scores.risk >= 55,
+    )
+    .slice(0, 5);
   const expensiveAssets = scan.excellentButExpensive.slice(0, 2);
   const riskyAssets = scan.cheapButRisky.slice(0, 2);
   const staleLabel =
@@ -257,9 +271,28 @@ const buildLocalScannerInsight = (
 
   return {
     source,
+    usedNewsSearch: false,
     generatedAt: new Date().toISOString(),
     scanLastUpdated: scan.lastUpdated,
     overview: `O radar analisou ${scan.analyzedCount} de ${scan.universe.total} ativos. A leitura não escolhe ativos por um único indicador: ela procura equilíbrio entre qualidade, valuation, renda/crescimento e segurança relativa, com ${staleLabel}. Os destaques abaixo mostram hipóteses de estudo e pontos de atenção, não recomendações personalizadas.`,
+    aiShortlist: balancedAssets.map((asset) => ({
+      ticker: asset.ticker,
+      title: `${asset.ticker} entrou na seleção assistida para estudo`,
+      description: [
+        `${describeMainStrength(asset)} e ${describeMainTradeOff(asset)}.`,
+        describeAssetContext(asset),
+        `A seleção veio do equilíbrio entre score final ${formatInsightScore(
+          asset.scores.final,
+        )}/100 e segurança ${formatInsightScore(asset.scores.risk)}/100, não de um único indicador.`,
+      ].join(' '),
+    })),
+    newsContext: [
+      {
+        title: 'Busca de notícias não usada nesta leitura',
+        description:
+          'A análise local não consultou notícias. Para incluir contexto recente, configure OPENAI_API_KEY e OPENAI_ENABLE_WEB_SEARCH=true no backend.',
+      },
+    ],
     opportunityHighlights: topAssets.map((asset) => ({
       ticker: asset.ticker,
       title: `${asset.ticker} combina força e ponto de atenção claro`,
@@ -355,9 +388,12 @@ const normalizeScannerInsight = (
 
   return {
     source: 'openai',
+    usedNewsSearch: false,
     generatedAt: new Date().toISOString(),
     scanLastUpdated: scan.lastUpdated,
     overview,
+    aiShortlist: normalizeInsightItems(record.aiShortlist),
+    newsContext: normalizeInsightItems(record.newsContext),
     opportunityHighlights: normalizeInsightItems(record.opportunityHighlights),
     cautionHighlights: normalizeInsightItems(record.cautionHighlights),
     dataGaps: normalizeInsightItems(record.dataGaps),
@@ -365,7 +401,32 @@ const normalizeScannerInsight = (
   };
 };
 
-const buildScannerInsightPrompt = (scan: ScannerResult) => `
+const parseJsonObject = (value: string) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    const fenced = value.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+
+    if (fenced) {
+      return JSON.parse(fenced);
+    }
+
+    const start = value.indexOf('{');
+    const end = value.lastIndexOf('}');
+
+    if (start >= 0 && end > start) {
+      return JSON.parse(value.slice(start, end + 1));
+    }
+
+    throw new Error('Resposta da IA não continha JSON válido.');
+  }
+};
+
+
+const buildScannerInsightPrompt = (
+  scan: ScannerResult,
+  options: { allowNewsSearch: boolean },
+) => `
 Você é uma camada de inteligência educacional para um scanner de ações brasileiras e FIIs.
 Analise o snapshot abaixo e gere uma leitura profissional do radar em português do Brasil.
 
@@ -380,10 +441,23 @@ Regras obrigatórias:
 - Compare forças e fragilidades: qualidade versus preço, renda versus sustentabilidade, crescimento versus segurança.
 - Trate scores.risk como nota de segurança relativa: quanto maior, menor o risco relativo no modelo.
 - Use linguagem de research educacional, como "passou melhor pelos filtros", "merece estudo adicional", "ponto de atenção" e "monitorar".
+- A seleção assistida pela IA deve escolher ativos para estudo dentro do universo analisado, combinando fundamentos, valuation, segurança, tipo de ativo, lacunas de dados e contexto recente.
+- A seleção assistida não deve ser igual automaticamente ao ranking por score final.
+- Se houver notícia relevante recente, explique como ela pode mudar a leitura do ativo, do setor ou do FII.
+- Cite fontes curtas quando usar notícia ou contexto externo.
+${options.allowNewsSearch
+  ? '- Use busca web para verificar notícias relevantes recentes sobre os principais ativos, setores, FIIs e cenário macro brasileiro. Priorize fatos relevantes dos últimos 30 dias quando disponíveis.'
+  : '- A ferramenta de busca web não está disponível nesta execução. Não invente notícias; limite o contexto externo ao que estiver no snapshot.'}
 
 Responda somente JSON válido neste formato:
 {
   "overview": "resumo executivo em 2 ou 3 frases",
+  "aiShortlist": [
+    { "ticker": "TICKER", "title": "por que entrou na seleção assistida", "description": "síntese interpretativa com fundamentos, valuation, segurança e contexto" }
+  ],
+  "newsContext": [
+    { "ticker": "TICKER opcional", "title": "notícia ou contexto relevante", "description": "como isso afeta a leitura educacional, citando fonte curta se houver" }
+  ],
   "opportunityHighlights": [
     { "ticker": "TICKER", "title": "título curto", "description": "por que apareceu bem no radar, citando também o principal ponto fraco" }
   ],
@@ -561,10 +635,12 @@ export const generateEducationalAnalysis = async (
 
 export const generateScannerInsight = async (
   scan: ScannerResult,
+  options: ScannerInsightOptions = {},
 ): Promise<ScannerInsightResponse> => {
-  const cacheKey = getScannerInsightCacheKey(scan);
+  const allowNewsSearch = Boolean(options.includeNews) && useOpenAiWebSearch();
+  const cacheKey = getScannerInsightCacheKey(scan, allowNewsSearch);
 
-  if (scannerInsightCache?.key === cacheKey) {
+  if (!options.forceRefresh && scannerInsightCache?.key === cacheKey) {
     return {
       ...scannerInsightCache.value,
       source: 'cache',
@@ -586,6 +662,18 @@ export const generateScannerInsight = async (
       apiKey: process.env.OPENAI_API_KEY,
     });
     const model = process.env.OPENAI_MODEL ?? 'gpt-4.1-mini';
+    const tools = allowNewsSearch
+      ? [
+          {
+            type: 'web_search_preview' as const,
+            search_context_size: 'medium' as const,
+            user_location: {
+              type: 'approximate' as const,
+              country: 'BR' as const,
+            },
+          },
+        ]
+      : undefined;
     const response = await client.responses.create({
       model,
       input: [
@@ -596,22 +684,28 @@ export const generateScannerInsight = async (
         },
         {
           role: 'user',
-          content: buildScannerInsightPrompt(scan),
+          content: buildScannerInsightPrompt(scan, { allowNewsSearch }),
         },
       ],
-      max_output_tokens: 1400,
+      tools,
+      max_output_tokens: 2200,
     });
 
     const output = response.output_text?.trim();
-    const parsed = output ? JSON.parse(output) : undefined;
+    const parsed = output ? parseJsonObject(output) : undefined;
     const insight = normalizeScannerInsight(parsed, scan);
 
     if (!insight || hasProhibitedTerms(JSON.stringify(insight))) {
       return fallback();
     }
 
-    scannerInsightCache = { key: cacheKey, value: insight };
-    return insight;
+    const insightWithMetadata = {
+      ...insight,
+      usedNewsSearch: allowNewsSearch,
+    };
+
+    scannerInsightCache = { key: cacheKey, value: insightWithMetadata };
+    return insightWithMetadata;
   } catch (error) {
     console.error('Falha ao gerar leitura inteligente do scanner:', error);
     return fallback();

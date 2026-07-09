@@ -1640,6 +1640,31 @@ const withWarnings = (scan: ScannerResult, warnings: string[]) => ({
   warnings: [...scan.warnings, ...warnings],
 });
 
+const isScannerSnapshotExpired = (scan: ScannerResult) =>
+  Date.now() - new Date(scan.lastUpdated).getTime() > CACHE_TTL_MS;
+
+const triggerBackgroundRefresh = () => {
+  if (inFlightScan) {
+    return;
+  }
+
+  void getMarketScan(true).catch((error) => {
+    console.error('Falha na atualização automática do scanner:', error);
+  });
+};
+
+const withAutomaticRefreshIfExpired = (scan: ScannerResult) => {
+  if (!isScannerSnapshotExpired(scan)) {
+    return scan;
+  }
+
+  triggerBackgroundRefresh();
+
+  return withWarnings(scan, [
+    'Snapshot antigo detectado. Uma atualização automática foi iniciada em segundo plano.',
+  ]);
+};
+
 export const getMarketScan = async (
   forceRefresh = false,
 ): Promise<ScannerResult> => {
@@ -1647,7 +1672,7 @@ export const getMarketScan = async (
     const memoryCachedResult = getScannerMemoryCache();
 
     if (memoryCachedResult) {
-      return memoryCachedResult;
+      return withAutomaticRefreshIfExpired(memoryCachedResult);
     }
 
     try {
@@ -1657,7 +1682,7 @@ export const getMarketScan = async (
       }
 
       setScannerMemoryCache(databaseCachedResult);
-      return databaseCachedResult;
+      return withAutomaticRefreshIfExpired(databaseCachedResult);
     } catch (error) {
       console.error('Falha ao carregar cache persistente do scanner:', error);
       const refreshedResult = await getMarketScan(true);

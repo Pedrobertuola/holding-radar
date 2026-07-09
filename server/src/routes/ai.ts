@@ -49,10 +49,23 @@ aiRouter.post('/analyze', async (request, response) => {
   response.json(result);
 });
 
-aiRouter.post('/scanner-insight', async (_request, response) => {
+const booleanFromBody = (body: unknown, key: string, fallback = false) => {
+  if (!body || typeof body !== 'object') {
+    return fallback;
+  }
+
+  const value = (body as Record<string, unknown>)[key];
+
+  return typeof value === 'boolean' ? value : fallback;
+};
+
+aiRouter.post('/scanner-insight', async (request, response) => {
   try {
     const scan = await getMarketScan();
-    const result = await generateScannerInsight(scan);
+    const result = await generateScannerInsight(scan, {
+      forceRefresh: booleanFromBody(request.body, 'force', false),
+      includeNews: booleanFromBody(request.body, 'includeNews', true),
+    });
     response.json(result);
   } catch (error) {
     console.error('Falha ao gerar leitura inteligente do scanner:', error);

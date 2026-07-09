@@ -166,9 +166,12 @@ export interface ScannerInsightItem {
 
 export interface ScannerInsightResponse {
   source: 'openai' | 'fallback' | 'cache';
+  usedNewsSearch: boolean;
   generatedAt: string;
   scanLastUpdated: string;
   overview: string;
+  aiShortlist: ScannerInsightItem[];
+  newsContext: ScannerInsightItem[];
   opportunityHighlights: ScannerInsightItem[];
   cautionHighlights: ScannerInsightItem[];
   dataGaps: ScannerInsightItem[];
