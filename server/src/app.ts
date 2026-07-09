@@ -12,13 +12,32 @@ const localhostOrigins = new Set([
   'http://127.0.0.1:5173',
 ]);
 
+const normalizeConfiguredOrigin = (origin: string) => {
+  const trimmed = origin.trim().replace(/\/+$/, '');
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('localhost') || trimmed.startsWith('127.0.0.1')) {
+    return `http://${trimmed}`;
+  }
+
+  return `https://${trimmed}`;
+};
+
 const configuredOrigins = (process.env.CORS_ORIGIN ?? process.env.CLIENT_ORIGIN)
   ?.split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+  .map(normalizeConfiguredOrigin)
+  .filter((origin): origin is string => Boolean(origin));
 
 const isProduction = process.env.NODE_ENV === 'production';
 const defaultProductionOrigins = [
+  'https://*.vercel.app',
   'https://holding-radar*.vercel.app',
   'https://holding-radar-client*.vercel.app',
 ];
@@ -50,6 +69,9 @@ const isOriginAllowed = (origin: string) => {
 
 app.use(
   cors({
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 204,
     origin(origin, callback) {
       if (!origin || isOriginAllowed(origin)) {
         callback(null, true);
