@@ -283,7 +283,11 @@ function ScannerInsightPanel({
               tone="positive"
             />
             <InsightColumn
-              title="Notícias e contexto recente"
+              title={
+                insight.usedNewsSearch
+                  ? 'Notícias e fatos relevantes'
+                  : 'Contexto sem busca de notícias'
+              }
               items={insight.newsContext}
               tone={insight.usedNewsSearch ? 'warning' : 'neutral'}
             />
@@ -379,26 +383,32 @@ export function DashboardPage() {
         'Atualização iniciada no backend. Vou verificar se um novo snapshot ficou disponível.',
       );
 
-      for (const waitTime of [15000, 30000, 45000]) {
-        await delay(waitTime);
-        const latest = await getScanner();
-        setScanner(latest);
+      try {
+        for (const waitTime of [15000, 30000, 45000]) {
+          await delay(waitTime);
+          const latest = await getScanner();
+          setScanner(latest);
 
-        if (
-          previousLastUpdated &&
-          latest.lastUpdated !== previousLastUpdated &&
-          latest.successfulFreshFetches > 0
-        ) {
-          setRefreshNotice(
-            `Scanner atualizado com ${latest.successfulFreshFetches} dado(s) fresco(s).`,
-          );
-          return;
+          if (
+            previousLastUpdated &&
+            latest.lastUpdated !== previousLastUpdated &&
+            latest.successfulFreshFetches > 0
+          ) {
+            setRefreshNotice(
+              `Scanner atualizado com ${latest.successfulFreshFetches} dado(s) fresco(s).`,
+            );
+            return;
+          }
         }
-      }
 
-      setRefreshNotice(
-        'O backend respondeu, mas o ranking ainda parece usar cache ou dados defasados. Isso normalmente indica limite da API, falha parcial de provedor ou ausência de campos novos.',
-      );
+        setRefreshNotice(
+          'O backend respondeu, mas o ranking ainda parece usar cache ou dados defasados. Isso normalmente indica limite da API, falha parcial de provedor ou ausência de campos novos.',
+        );
+      } catch {
+        setRefreshNotice(
+          'A atualização foi iniciada, mas não consegui confirmar o novo snapshot automaticamente. Recarregue em alguns minutos; o Render pode ficar ocupado enquanto consulta os provedores.',
+        );
+      }
     } catch (requestError) {
       setError(
         requestError instanceof Error

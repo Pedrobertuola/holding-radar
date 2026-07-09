@@ -381,6 +381,12 @@ const normalizeScannerInsight = (
 
   const record = payload as Record<string, unknown>;
   const overview = typeof record.overview === 'string' ? record.overview.trim() : '';
+  const aiShortlist = normalizeInsightItems(record.aiShortlist);
+  const newsContext = normalizeInsightItems(record.newsContext);
+  const opportunityHighlights = normalizeInsightItems(record.opportunityHighlights);
+  const cautionHighlights = normalizeInsightItems(record.cautionHighlights);
+  const dataGaps = normalizeInsightItems(record.dataGaps);
+  const monitorPoints = normalizeInsightItems(record.monitorPoints);
 
   if (!overview) {
     return undefined;
@@ -392,12 +398,21 @@ const normalizeScannerInsight = (
     generatedAt: new Date().toISOString(),
     scanLastUpdated: scan.lastUpdated,
     overview,
-    aiShortlist: normalizeInsightItems(record.aiShortlist),
-    newsContext: normalizeInsightItems(record.newsContext),
-    opportunityHighlights: normalizeInsightItems(record.opportunityHighlights),
-    cautionHighlights: normalizeInsightItems(record.cautionHighlights),
-    dataGaps: normalizeInsightItems(record.dataGaps),
-    monitorPoints: normalizeInsightItems(record.monitorPoints),
+    aiShortlist: aiShortlist.length > 0 ? aiShortlist : opportunityHighlights,
+    newsContext:
+      newsContext.length > 0
+        ? newsContext
+        : [
+            {
+              title: 'Nenhum fato recente estruturado foi retornado',
+              description:
+                'A IA não trouxe notícia concreta em JSON. A leitura abaixo deve ser tratada como análise dos dados do scanner, não como varredura jornalística completa.',
+            },
+          ],
+    opportunityHighlights,
+    cautionHighlights,
+    dataGaps,
+    monitorPoints,
   };
 };
 
@@ -441,22 +456,25 @@ Regras obrigatórias:
 - Compare forças e fragilidades: qualidade versus preço, renda versus sustentabilidade, crescimento versus segurança.
 - Trate scores.risk como nota de segurança relativa: quanto maior, menor o risco relativo no modelo.
 - Use linguagem de research educacional, como "passou melhor pelos filtros", "merece estudo adicional", "ponto de atenção" e "monitorar".
-- A seleção assistida pela IA deve escolher ativos para estudo dentro do universo analisado, combinando fundamentos, valuation, segurança, tipo de ativo, lacunas de dados e contexto recente.
+- A seleção assistida pela IA deve escolher ativos para estudo dentro do universo analisado, combinando fundamentos, valuation, segurança, tipo de ativo, lacunas de dados, contexto recente e fatos relevantes que não aparecem diretamente nos indicadores.
 - A seleção assistida não deve ser igual automaticamente ao ranking por score final.
+- Busque fatos concretos, não comentários genéricos. Exemplos de fatos úteis: redução ou aumento de dívida, aquisição ou venda de ativos, compra de imóveis por FII, emissão de cotas, revisão de rating, inadimplência ou recuperação de CRIs, vacância relevante, troca de gestão, guidance, resultado trimestral, mudança regulatória, recompra, mudança de participação relevante, entrada/saída de índice, alteração de recomendação ou preço-alvo por casas de análise, captação, desalavancagem ou evento setorial.
 - Se houver notícia relevante recente, explique como ela pode mudar a leitura do ativo, do setor ou do FII.
+- Não use a notícia como recomendação. Use como evidência qualitativa para priorizar estudo, aumentar cautela ou reduzir confiança.
+- Evite frases óbvias como "o dividendo está bom" ou "o P/VP está baixo" se isso já estiver nos indicadores. Diga algo novo ou declare que não encontrou contexto recente relevante.
 - Cite fontes curtas quando usar notícia ou contexto externo.
 ${options.allowNewsSearch
-  ? '- Use busca web para verificar notícias relevantes recentes sobre os principais ativos, setores, FIIs e cenário macro brasileiro. Priorize fatos relevantes dos últimos 30 dias quando disponíveis.'
+  ? '- Use busca web obrigatoriamente antes de responder. Pesquise os principais tickers do radar, os tickers com cautela, FIIs de papel/tijolo relevantes e notícias macro/setoriais brasileiras. Priorize fatos dos últimos 60 dias, mas aceite fatos mais antigos se ainda explicarem o risco atual.'
   : '- A ferramenta de busca web não está disponível nesta execução. Não invente notícias; limite o contexto externo ao que estiver no snapshot.'}
 
 Responda somente JSON válido neste formato:
 {
   "overview": "resumo executivo em 2 ou 3 frases",
   "aiShortlist": [
-    { "ticker": "TICKER", "title": "por que entrou na seleção assistida", "description": "síntese interpretativa com fundamentos, valuation, segurança e contexto" }
+    { "ticker": "TICKER", "title": "por que entrou na seleção assistida", "description": "síntese interpretativa com fundamentos, valuation, segurança e notícia/fato relevante quando houver" }
   ],
   "newsContext": [
-    { "ticker": "TICKER opcional", "title": "notícia ou contexto relevante", "description": "como isso afeta a leitura educacional, citando fonte curta se houver" }
+    { "ticker": "TICKER opcional", "title": "fato relevante encontrado", "description": "o que aconteceu, por que importa para a análise e fonte curta" }
   ],
   "opportunityHighlights": [
     { "ticker": "TICKER", "title": "título curto", "description": "por que apareceu bem no radar, citando também o principal ponto fraco" }
@@ -680,7 +698,9 @@ export const generateScannerInsight = async (
         {
           role: 'system',
           content:
-            'Você gera leituras educacionais de radar de mercado, sem recomendação personalizada e sem inventar dados.',
+            allowNewsSearch
+              ? 'Você é um analista educacional de mercado. Use busca web para encontrar fatos relevantes recentes, cite fontes curtas, não invente dados e não faça recomendação personalizada.'
+              : 'Você gera leituras educacionais de radar de mercado, sem recomendação personalizada e sem inventar dados.',
         },
         {
           role: 'user',
