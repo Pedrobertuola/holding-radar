@@ -39,7 +39,7 @@ const requestJson = async <T>(
     });
   } catch {
     throw new Error(
-      `Não foi possível conectar à API em ${apiBaseUrl}. Verifique se o backend no Render está ativo e se CORS_ORIGIN permite o domínio da Vercel.`,
+      `Não foi possível conectar à API em ${apiBaseUrl}. Abra ${apiBaseUrl}/api/health para confirmar se o Render está ativo. Se o health estiver ok, o problema provavelmente é CORS: inclua o domínio atual da Vercel em CORS_ORIGIN ou use um domínio holding-radar*.vercel.app permitido pelo backend.`,
     );
   }
 

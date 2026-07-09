@@ -18,11 +18,15 @@ const configuredOrigins = (process.env.CORS_ORIGIN ?? process.env.CLIENT_ORIGIN)
   .filter(Boolean);
 
 const isProduction = process.env.NODE_ENV === 'production';
+const defaultProductionOrigins = [
+  'https://holding-radar*.vercel.app',
+  'https://holding-radar-client*.vercel.app',
+];
 const allowedOrigins =
   configuredOrigins && configuredOrigins.length > 0
-    ? new Set(configuredOrigins)
+    ? new Set([...configuredOrigins, ...defaultProductionOrigins])
     : isProduction
-      ? new Set<string>()
+      ? new Set(defaultProductionOrigins)
       : localhostOrigins;
 
 const isOriginAllowed = (origin: string) => {
